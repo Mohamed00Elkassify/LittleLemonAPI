@@ -1,5 +1,5 @@
 from django.contrib.auth.models import Group, User
-from rest_framework import viewsets
+from rest_framework import viewsets, generics
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
@@ -58,3 +58,31 @@ class CategoryViewSet(viewsets.ViewSet):
         else:
             permission_classes = [IsAuthenticated] # Allow all authenticated users
         return [permission() for permission in permission_classes]
+
+# View for Cart operations
+class cartView(generics.ListCreateAPIView, generics.DestroyAPIView):
+    """
+    Handles operations for the user's shopping cart:
+    - Customers can view, add, and delete items in their cart.
+    - Automatically calculates unit_price and total_price when adding items.
+    """
+    serializer_class = CartSerializer
+    permission_classes = [IsCustomer] # Only customers can access the cart
+
+    def get_queryset(self):
+        """
+        Fetch cart items for the current user.
+        """
+        return Cart.objects.all().filter(user = self.request.user)
+    
+    def perform_create(self, serializer):
+        """
+        Custom logic for adding items to the cart:
+        - Calculate unit_price and total_price based on the menu item's price and quantity.
+        - Automatically set the user to the current user.
+        """
+        menuitem = serializer.validated_data['menuitem']
+        quantity = serializer.validated_data['quantity']
+        unit_price = menuitem.price
+        total_price = quantity * unit_price
+        serializer.save(user=self.request.user, unit_price=unit_price, total_price=total_price)
