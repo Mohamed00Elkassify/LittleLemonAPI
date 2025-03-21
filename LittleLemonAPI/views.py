@@ -1,14 +1,14 @@
 from django.contrib.auth.models import Group, User
-from rest_framework import viewsets, generics, status
-from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import viewsets, generics, status
+from rest_framework.decorators import APIView
+from rest_framework.response import Response
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from .models import *
 from .serializers import *
-from . permissions import *
-
-# Create your views here.
+from .permissions import *
 
 # ViewSet for Menu Items
 class MenuItemViewSet(viewsets.ModelViewSet):
@@ -148,3 +148,76 @@ class OrderViewSet(viewsets.ModelViewSet):
             )
         cart_items.delete()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+# View for Manager Group operations
+class ManagerGroupview(APIView):
+    """
+    Handles operations for the Manager group.
+    - Admins and Managers can list, add, and remove users from the Manager group.
+    """
+    permission_classes = [IsManager | IsAdminUser] # Only Admins and Managers can access this view
+    def get(self, request):
+        """
+        List all users in the Manager group.
+        """
+        managers = Group.objects.get(name='Manager').user_set.all()
+        serializer = UserSerializer(managers, many=True)
+        return Response(serializer.data)
+    
+    def post(self, request):
+        """
+        Add a user to the Manager group.
+        """
+        username = request.data.get('username')
+        if not username:
+            return Response({'error': 'Username is required'}, status=status.HTTP_400_BAD_REQUEST)
+        user = get_object_or_404(User, username=username)
+        manager_group = Group.objects.get(name='Manager')
+        manager_group.user_set.add(user)
+        return Response({'message': f'{username} added to Manager group'}, status=status.HTTP_201_CREATED)
+    
+    def delete(self, request, userId):
+        """
+        Remove a user from the Manager group.
+        """
+        user = get_object_or_404(User, id=userId)
+        manager_group = Group.objects.get(name='Manager')
+        manager_group.user_set.remove(user)
+        return Response({'message': f'{user.username} removed from Manager group'}, status=status.HTTP_200_OK)
+
+# View for the Delivery Crew Group operations
+class DeliveryCrewGroup(APIView):
+    """
+    Handles operations for the Delivery Crew group.
+    - Admins and Managers can list, add, and remove users from the Delivery Crew group.
+    """
+    permission_classes = [IsAdminUser | IsManager]  # Only Admins and Managers can access this view
+    
+    def get(self, request):
+        """
+        List all users in the Delivery Crew group.
+        """
+        delivery_crew = Group.objects.get(name='Delivery Crew').user_set.all()
+        serializer = UserSerializer(delivery_crew, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        """
+        Add a user to the Delivery Crew group.
+        """
+        username = request.data.get('username')
+        if not username:
+            return Response({'error': 'Username is required'}, status=status.HTTP_400_BAD_REQUEST)
+        user = get_object_or_404(User, username=username)
+        delivery_crew_group = Group.objects.get(name='Delivery Crew')
+        delivery_crew_group.user_set.add(user)
+        return Response({'message': f'{username} added to Delivery Crew group'}, status=status.HTTP_201_CREATED)
+
+    def delete(self, request, userId):
+        """
+        Remove a user from the Delivery Crew group.
+        """
+        user = get_object_or_404(User, id=userId)
+        delivery_crew_group = Group.objects.get(name='Delivery Crew')
+        delivery_crew_group.user_set.remove(user)
+        return Response({'message': f'{user.username} removed from Delivery Crew group'}, status=status.HTTP_200_OK)
