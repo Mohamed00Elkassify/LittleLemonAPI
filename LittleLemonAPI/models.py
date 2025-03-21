@@ -35,7 +35,7 @@ class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     delivery_crew = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='delivery_crew')
     status = models.BooleanField(db_index=True, default=0)
-    totatl = models.DecimalField(max_digits=6, decimal_places=2)
+    total = models.DecimalField(max_digits=6, decimal_places=2)
     date = models.DateTimeField(db_index=True)
 
     def __str__(self):
