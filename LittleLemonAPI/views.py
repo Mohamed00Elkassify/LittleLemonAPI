@@ -40,7 +40,7 @@ class MenuItemViewSet(viewsets.ModelViewSet):
         return [permission() for permission in permission_classes]
 
 # ViewSet for Categories
-class CategoryViewSet(viewsets.ViewSet):
+class CategoryViewSet(viewsets.ModelViewSet):
     """
     Handles CRUD operations for Categories.
     - Managers and Admins can create, update, and delete categories.
