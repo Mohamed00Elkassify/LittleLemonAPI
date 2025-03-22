@@ -119,13 +119,13 @@ class OrderViewSet(viewsets.ModelViewSet):
         - Customers can view their own orders.
         """
         user = self.request.user
-        if IsManager.has_permission(self.request, self) or IsAdminUser().has_permission(self.request, self):
-            return Order.objects.all()
+        if IsManager().has_permission(self.request, self) or IsAdminUser().has_permission(self.request, self):
+            return Order.objects.all()  # Managers and Admins see all orders
         elif IsDeliveryCrew().has_permission(self.request, self):
-            return Order.objects.all.filter(delivery_crew=user) # Delivery Crew see orders assigned to them
+            return Order.objects.filter(delivery_crew=user)  # Delivery Crew see orders assigned to them
         else:
-            return Order.objects.all().filter(user=user) # Customers see their own orders
-        
+            return Order.objects.filter(user=user)  # Customers see their own orders
+
     def perform_create(self, serializer):
         """
         Custom logic for creating an order:
@@ -133,7 +133,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         - Calculate the total price and create OrderItem records.
         - Delete the cart items after the order is created.
         """
-        cart_items = Cart.objects.all.filter(user=self.request.user)
+        cart_items = Cart.objects.filter(user=self.request.user)  # Get cart items for the current user
         if not cart_items.exists():
             return Response({'error': 'Cart is empty'}, status=status.HTTP_400_BAD_REQUEST)
         total = sum(item.total_price for item in cart_items)
@@ -146,8 +146,35 @@ class OrderViewSet(viewsets.ModelViewSet):
                 unit_price=item.unit_price,
                 total_price=item.total_price,
             )
-        cart_items.delete()
+        cart_items.delete() # Delete all cart items for the user
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        """
+        Custom logic for updating an order:
+        - Only managers can update the delivery_crew field.
+        - Customers and delivery crew can only update the status field.
+        """
+        instance = self.get_object()
+        user = request.user
+
+        # Check if the user is trying to update the delivery_crew field
+        if 'delivery_crew' in request.data and not (IsManager().has_permission(request, self) or IsAdminUser().has_permission(request, self)):
+            return Response(
+                {'error': 'Only managers can update the delivery crew.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Check if the user is trying to update the status field
+        if 'status' in request.data and not (IsManager().has_permission(request, self) or IsAdminUser().has_permission(request, self) or IsDeliveryCrew().has_permission(request, self)):
+            return Response(
+                {'error': 'Only managers, admins, or delivery crew can update the status.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
     
 # View for Manager Group operations
 class ManagerGroupview(APIView):

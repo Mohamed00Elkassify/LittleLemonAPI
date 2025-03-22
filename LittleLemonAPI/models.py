@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 # Create your models here.
 class Category(models.Model):
@@ -36,7 +37,7 @@ class Order(models.Model):
     delivery_crew = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='delivery_crew')
     status = models.BooleanField(db_index=True, default=0)
     total = models.DecimalField(max_digits=6, decimal_places=2)
-    date = models.DateTimeField(db_index=True)
+    date = models.DateTimeField(default=timezone.now, db_index=True)
 
     def __str__(self):
         return f"Order {self.id} by {self.user.username}"

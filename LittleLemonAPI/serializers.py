@@ -22,9 +22,13 @@ class CartSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'menuitem', 'quantity', 'unit_price', 'total_price']
 
 class OrderSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(read_only=True)  # Make user read-only
+    total = serializers.DecimalField(read_only=True, max_digits=6, decimal_places=2)  # Make total read-only
+    date = serializers.DateTimeField(read_only=True) # Make date read only
     class Meta:
         model = Order
         fields = ['id', 'user', 'delivery_crew', 'status', 'total', 'date']
+
 
 class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:
